@@ -24,6 +24,7 @@ namespace StreamingResponseDemo.Controllers
             _logger = logger;
         }
 
+
         [HttpGet("demo1")]
         public async Task GetDemo1Async()
         {
@@ -49,12 +50,13 @@ namespace StreamingResponseDemo.Controllers
             await outputStream.FlushAsync();
         }
 
+
         [HttpGet("demo2")]
         public async Task GetDemo2Async()
         {
             var riga = new double[1000];
 
-            var writer = new MyStreamingWriter(this);
+            var writer = new MyStreamingWriter(this.HttpContext);
             try
             {
                 await writer.BeginFieldAsync("nome");
@@ -62,6 +64,9 @@ namespace StreamingResponseDemo.Controllers
 
                 await writer.BeginFieldAsync("nato");
                 await writer.WriteAsync(new DateTime(1966, 7, 23));
+
+                await writer.BeginFieldAsync("campo_nullo");
+                await writer.WriteAsync(null);
 
                 await writer.BeginFieldAsync("matrice");
                 const int N = 10000;
@@ -82,45 +87,6 @@ namespace StreamingResponseDemo.Controllers
                 await writer.EndAsync();
             }
         }
-    }
 
-    public class MyStreamingWriter
-    {
-        public MyStreamingWriter(
-            ControllerBase controller
-            )
-        {
-            this._stream = controller.Response.Body;
-            this._buffer = new byte[0x10000];
-
-            controller.Response.StatusCode = 200;   //OK
-            controller.Response.Headers.Add(HeaderNames.ContentType, "text/plain");
-        }
-
-        private readonly Stream _stream;
-        private readonly byte[] _buffer;
-
-        public async Task BeginFieldAsync(string name)
-        {
-            this._buffer[0] = (byte)'\a';
-            int byteCount = Encoding.UTF8.GetBytes(name, 0, name.Length, this._buffer, 1);
-            //TODO controllo buffer overflow
-            this._buffer[byteCount + 1] = (byte)'\r';
-            await this._stream.WriteAsync(this._buffer, 0, byteCount + 2);
-        }
-
-        public async Task WriteAsync(object content)
-        {
-            string s = JsonSerializer.Serialize(content);
-            int byteCount = Encoding.UTF8.GetBytes(s, 0, s.Length, this._buffer, 0);
-            //TODO controllo buffer overflow
-            this._buffer[byteCount] = (byte)'\r';
-            await this._stream.WriteAsync(this._buffer, 0, byteCount + 1);
-        }
-
-        public async Task EndAsync()
-        {
-            await this._stream.FlushAsync();
-        }
     }
 }
