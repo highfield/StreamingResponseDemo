@@ -88,5 +88,60 @@ namespace StreamingResponseDemo.Controllers
             }
         }
 
+
+        [HttpPut("demo3")]
+        public async Task PutDemo3Async(
+            MyPutPayload payload
+            )
+        {
+            Console.WriteLine($"{nameof(MyPutPayload.Booleano)}={payload.Booleano}");
+            Console.WriteLine($"{nameof(MyPutPayload.Intero)}={payload.Intero}");
+            Console.WriteLine($"{nameof(MyPutPayload.Reale)}={payload.Reale}");
+            Console.WriteLine($"{nameof(MyPutPayload.Testo)}={payload.Testo}");
+            Console.WriteLine($"{nameof(MyPutPayload.Istante)}={payload.Istante}");
+
+            var riga = new double[1000];
+
+            var writer = new MyStreamingWriter(this.HttpContext);
+            try
+            {
+                await writer.BeginFieldAsync("nome");
+                await writer.WriteAsync("Mario");
+
+                await writer.BeginFieldAsync("nato");
+                await writer.WriteAsync(new DateTime(1966, 7, 23));
+
+                await writer.BeginFieldAsync("campo_nullo");
+                await writer.WriteAsync(null);
+
+                await writer.BeginFieldAsync("matrice");
+                const int N = 10000;
+                for (int i = 0; i < N; i++)
+                {
+                    for (int k = 0; k < riga.Length; k++)
+                    {
+                        riga[k] = Math.PI * i * k;
+                    }
+                    await writer.WriteAsync(riga);
+                }
+
+                await writer.BeginFieldAsync("count");
+                await writer.WriteAsync(N);
+            }
+            finally
+            {
+                await writer.EndAsync();
+            }
+        }
+
+        public class MyPutPayload
+        {
+            public bool Booleano { get; set; }
+            public int Intero { get; set; }
+            public double Reale { get; set; }
+            public string Testo { get; set; }
+            public DateTime Istante { get; set; }
+        }
+
     }
 }
